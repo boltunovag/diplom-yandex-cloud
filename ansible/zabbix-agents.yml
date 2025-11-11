@@ -1,0 +1,43 @@
+---
+- name: Install and configure Zabbix Agents
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install Zabbix Agent
+      apt:
+        name: zabbix-agent
+        state: present
+
+    - name: Configure Zabbix Agent
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        line: "{{ item }}"
+        regexp: "^{{ item.split('=')[0] }}="
+        state: present
+        backup: yes
+      with_items:
+        - "Server=zabbix.ru-central1.internal"
+        - "ServerActive=zabbix.ru-central1.internal"
+        - "Hostname={{ inventory_hostname }}"
+        - "EnableRemoteCommands=1"
+      notify: restart zabbix-agent
+
+    - name: Start and enable Zabbix Agent
+      systemd:
+        name: zabbix-agent
+        state: restarted
+        enabled: yes
+
+  handlers:
+    - name: restart zabbix-agent
+      systemd:
+        name: zabbix-agent
+        state: restarted
+
+    - debug:
+        msg: "Zabbix Agent configured on {{ inventory_hostname }} (connects to zabbix.ru-central1.internal)"

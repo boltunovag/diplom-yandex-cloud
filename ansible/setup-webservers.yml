@@ -1,0 +1,97 @@
+---
+- name: Setup web servers with nginx (replace Apache)
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Stop Apache
+      systemd:
+        name: apache2
+        state: stopped
+        enabled: no
+
+    - name: Remove Apache
+      apt:
+        name: apache2
+        state: absent
+        purge: yes
+      ignore_errors: yes
+
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Create simple index.html
+      copy:
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Web Server {{ inventory_hostname }}</title>
+          </head>
+          <body>
+              <h1>Hello from {{ inventory_hostname }}</h1>
+              <p>This is web server in Yandex Cloud</p>
+              <p>Server IP: {{ ansible_default_ipv4.address }}</p>
+              <p>Powered by Nginx</p>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Ensure nginx default config is correct
+      copy:
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              
+              root /var/www/html;
+              index index.html index.htm;
+              
+              server_name _;
+              
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Test nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+
+    - debug:
+        var: nginx_test.stdout
+
+    - name: Start and enable nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+      when: nginx_test.rc == 0
+
+    - name: Check nginx is listening on port 80
+      wait_for:
+        port: 80
+        host: "127.0.0.1"
+        timeout: 30
+
+    - name: Test HTTP response
+      uri:
+        url: http://localhost
+        return_content: yes
+      register: http_test
+
+    - debug:
+        msg: "Nginx is working! HTTP status: {{ http_test.status }}"

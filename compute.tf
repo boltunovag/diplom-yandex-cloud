@@ -1,0 +1,143 @@
+# Bastion Host - точка входа в инфраструктуру
+resource "yandex_compute_instance" "bastion" {
+  name        = "bastion"
+  hostname    = "bastion"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores  = 2
+    memory = 2
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd827b91d99psvq5fjit"  # Ubuntu 22.04
+      size     = 10
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.public-subnet-a.id
+    nat       = true
+    security_group_ids = [yandex_vpc_security_group.bastion-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"  
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}
+
+# Веб-сервер 1
+resource "yandex_compute_instance" "web-1" {
+  name        = "web-1"
+  hostname    = "web-1"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores  = 2
+    memory = 2
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd827b91d99psvq5fjit"
+      size     = 10
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.private-subnet-a.id
+    nat       = false
+    security_group_ids = [yandex_vpc_security_group.internal-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}
+
+# Веб-сервер 2
+resource "yandex_compute_instance" "web-2" {
+  name        = "web-2"
+  hostname    = "web-2"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores  = 2
+    memory = 2
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd827b91d99psvq5fjit"
+      size     = 10
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.private-subnet-a.id
+    nat       = false
+    security_group_ids = [yandex_vpc_security_group.internal-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}
+
+# Zabbix Server
+resource "yandex_compute_instance" "zabbix" {
+  name        = "zabbix"
+  hostname    = "zabbix"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores  = 2
+    memory = 4
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd8498pb5smsd5ch4gid"
+      size     = 20
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.public-subnet-a.id
+    nat       = true
+    security_group_ids = [yandex_vpc_security_group.monitoring-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}

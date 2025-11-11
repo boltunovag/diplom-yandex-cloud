@@ -1,0 +1,11 @@
+---
+- name: Update known_hosts on bastion
+  hosts: bastion
+  tasks:
+    - name: Scan and add web servers to known_hosts
+      shell: |
+        ssh-keyscan -H 192.168.20.23 >> ~/.ssh/known_hosts
+        ssh-keyscan -H 192.168.20.12 >> ~/.ssh/known_hosts
+        ssh-keyscan -H 192.168.10.27 >> ~/.ssh/known_hosts
+      args:
+        warn: false
