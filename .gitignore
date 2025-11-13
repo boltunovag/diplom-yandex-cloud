@@ -2,3 +2,10 @@ key.json
 *.tfstate
 .terraform/
 ansible/inventory.yml
+terraform.tfvars
+*.backup
+terraform.tfstate*
+key.json
+*.pem
+*.key
+*.pub

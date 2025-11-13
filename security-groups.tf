@@ -9,7 +9,7 @@ resource "yandex_vpc_security_group" "bastion-sg" {
   ingress {
     protocol       = "TCP"
     port           = 22
-    v4_cidr_blocks = ["0.0.0.0/0"]  # SSH доступ отовсюду
+    v4_cidr_blocks = ["0.0.0.0/0"] # SSH доступ отовсюду
   }
 
   egress {
@@ -27,7 +27,7 @@ resource "yandex_vpc_security_group" "loadbalancer-sg" {
   ingress {
     protocol       = "TCP"
     port           = 80
-    v4_cidr_blocks = ["0.0.0.0/0"]  # HTTP доступ отовсюду
+    v4_cidr_blocks = ["0.0.0.0/0"] # HTTP доступ отовсюду
   }
 
   egress {
@@ -45,31 +45,31 @@ resource "yandex_vpc_security_group" "internal-sg" {
   ingress {
     protocol       = "TCP"
     port           = 22
-    v4_cidr_blocks = ["192.168.10.0/24"]  # SSH из подсети бастиона
+    v4_cidr_blocks = ["192.168.10.0/24"] # SSH из подсети бастиона
+  }
+
+  ingress {
+    protocol          = "TCP"
+    port              = 80
+    security_group_id = yandex_vpc_security_group.loadbalancer-sg.id # HTTP от балансера
   }
 
   ingress {
     protocol       = "TCP"
     port           = 80
-    security_group_id = yandex_vpc_security_group.loadbalancer-sg.id  # HTTP от балансера
-  }
-
-  ingress {
-    protocol       = "TCP"
-    port           = 80
-    v4_cidr_blocks = ["192.168.0.0/16"]  # Для Health Check балансировщика
+    v4_cidr_blocks = ["192.168.0.0/16"] # Для Health Check балансировщика
   }
 
   ingress {
     protocol       = "TCP"
     port           = 9200
-    v4_cidr_blocks = ["192.168.0.0/16"]  # Elasticsearch из внутренней сети
+    v4_cidr_blocks = ["192.168.0.0/16"] # Elasticsearch из внутренней сети
   }
 
   ingress {
     protocol       = "TCP"
     port           = 10050
-    v4_cidr_blocks = ["192.168.0.0/16"]  # Zabbix Agent из внутренней сети
+    v4_cidr_blocks = ["192.168.0.0/16"] # Zabbix Agent из внутренней сети
   }
 
   egress {
@@ -87,31 +87,31 @@ resource "yandex_vpc_security_group" "monitoring-sg" {
   ingress {
     protocol       = "TCP"
     port           = 22
-    v4_cidr_blocks = ["0.0.0.0/0"]  # SSH доступ отовсюду
+    v4_cidr_blocks = ["0.0.0.0/0"] # SSH доступ отовсюду
   }
 
   ingress {
     protocol       = "TCP"
     port           = 80
-    v4_cidr_blocks = ["0.0.0.0/0"]  # Web UI доступ отовсюду
+    v4_cidr_blocks = ["0.0.0.0/0"] # Web UI доступ отовсюду
   }
 
   ingress {
     protocol       = "TCP"
     port           = 443
-    v4_cidr_blocks = ["0.0.0.0/0"]  # HTTPS доступ
+    v4_cidr_blocks = ["0.0.0.0/0"] # HTTPS доступ
   }
 
   ingress {
     protocol       = "TCP"
     port           = 5601
-    v4_cidr_blocks = ["0.0.0.0/0"]  # Kibana
+    v4_cidr_blocks = ["0.0.0.0/0"] # Kibana
   }
 
   ingress {
     protocol       = "TCP"
     port           = 10051
-    v4_cidr_blocks = ["192.168.0.0/16"]  # Zabbix Trapper из внутренней сети
+    v4_cidr_blocks = ["192.168.0.0/16"] # Zabbix Trapper из внутренней сети
   }
 
   egress {

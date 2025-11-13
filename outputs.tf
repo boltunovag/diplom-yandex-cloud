@@ -21,10 +21,10 @@ output "web_2_internal_ip" {
 output "security_group_ids" {
   description = "IDs of created security groups"
   value = {
-    bastion     = yandex_vpc_security_group.bastion-sg.id
-    internal    = yandex_vpc_security_group.internal-sg.id
+    bastion      = yandex_vpc_security_group.bastion-sg.id
+    internal     = yandex_vpc_security_group.internal-sg.id
     loadbalancer = yandex_vpc_security_group.loadbalancer-sg.id
-    monitoring  = yandex_vpc_security_group.monitoring-sg.id
+    monitoring   = yandex_vpc_security_group.monitoring-sg.id
   }
 }
 

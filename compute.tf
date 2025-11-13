@@ -26,7 +26,22 @@ resource "yandex_compute_instance" "bastion" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"  
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = <<-EOF
+      #cloud-config
+      users:
+        - name: ubuntu
+          ssh-authorized-keys:
+            - ${file("~/.ssh/yc-ed25519.pub")}
+      package_update: true
+      package_upgrade: true
+      packages:
+        - ansible
+        - git
+      runcmd:
+        - [ansible, --version]
+        - [echo, "Cloud-init completed successfully"]
+      EOF
   }
 
   scheduling_policy {
@@ -42,8 +57,8 @@ resource "yandex_compute_instance" "web-1" {
   zone        = "ru-central1-a"
 
   resources {
-    cores  = 2
-    memory = 2
+    cores         = 2
+    memory        = 2
     core_fraction = 20
   }
 
@@ -56,8 +71,8 @@ resource "yandex_compute_instance" "web-1" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.private-subnet-a.id
-    nat       = false
+    subnet_id          = yandex_vpc_subnet.private-subnet-a.id
+    nat                = false
     security_group_ids = [yandex_vpc_security_group.internal-sg.id]
   }
 
@@ -78,8 +93,8 @@ resource "yandex_compute_instance" "web-2" {
   zone        = "ru-central1-a"
 
   resources {
-    cores  = 2
-    memory = 2
+    cores         = 2
+    memory        = 2
     core_fraction = 20
   }
 
@@ -92,8 +107,8 @@ resource "yandex_compute_instance" "web-2" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.private-subnet-a.id
-    nat       = false
+    subnet_id          = yandex_vpc_subnet.private-subnet-a.id
+    nat                = false
     security_group_ids = [yandex_vpc_security_group.internal-sg.id]
   }
 
@@ -114,8 +129,8 @@ resource "yandex_compute_instance" "zabbix" {
   zone        = "ru-central1-a"
 
   resources {
-    cores  = 2
-    memory = 4
+    cores         = 2
+    memory        = 4
     core_fraction = 20
   }
 
@@ -128,8 +143,8 @@ resource "yandex_compute_instance" "zabbix" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.public-subnet-a.id
-    nat       = true
+    subnet_id          = yandex_vpc_subnet.public-subnet-a.id
+    nat                = true
     security_group_ids = [yandex_vpc_security_group.monitoring-sg.id]
   }
 

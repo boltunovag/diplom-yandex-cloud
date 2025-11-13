@@ -18,13 +18,13 @@ resource "yandex_alb_backend_group" "web-backend-group" {
   name = "web-backend-group"
 
   http_backend {
-    name = "web-backend"
-    weight = 1
-    port = 80
+    name             = "web-backend"
+    weight           = 1
+    port             = 80
     target_group_ids = [yandex_alb_target_group.web-target-group.id]
-    
+
     healthcheck {
-      timeout = "1s"
+      timeout  = "1s"
       interval = "2s"
       http_healthcheck {
         path = "/"
@@ -42,7 +42,7 @@ resource "yandex_alb_http_router" "web-router" {
 resource "yandex_alb_virtual_host" "web-virtual-host" {
   name           = "web-virtual-host"
   http_router_id = yandex_alb_http_router.web-router.id
-  
+
   route {
     name = "web-route"
     http_route {
@@ -55,8 +55,8 @@ resource "yandex_alb_virtual_host" "web-virtual-host" {
 
 # Application Load Balancer
 resource "yandex_alb_load_balancer" "web-balancer" {
-  name        = "web-balancer"
-  network_id  = yandex_vpc_network.diplom-network.id
+  name       = "web-balancer"
+  network_id = yandex_vpc_network.diplom-network.id
 
   allocation_policy {
     location {
