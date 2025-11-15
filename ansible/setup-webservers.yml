@@ -1,21 +1,8 @@
 ---
-- name: Setup web servers with nginx (replace Apache)
+- name: Setup web servers with nginx
   hosts: webservers
   become: yes
   tasks:
-    - name: Stop Apache
-      systemd:
-        name: apache2
-        state: stopped
-        enabled: no
-
-    - name: Remove Apache
-      apt:
-        name: apache2
-        state: absent
-        purge: yes
-      ignore_errors: yes
-
     - name: Update apt package cache
       apt:
         update_cache: yes
@@ -28,7 +15,6 @@
     - name: Create simple index.html
       copy:
         content: |
-          <!DOCTYPE html>
           <html>
           <head>
               <title>Web Server {{ inventory_hostname }}</title>
@@ -58,7 +44,7 @@
               server_name _;
               
               location / {
-                  try_files $uri $uri/ =404;
+                  try_files  / =404;
               }
           }
         dest: /etc/nginx/sites-available/default
@@ -84,7 +70,7 @@
     - name: Check nginx is listening on port 80
       wait_for:
         port: 80
-        host: "127.0.0.1"
+        host: '127.0.0.1'
         timeout: 30
 
     - name: Test HTTP response
@@ -94,4 +80,4 @@
       register: http_test
 
     - debug:
-        msg: "Nginx is working! HTTP status: {{ http_test.status }}"
+        msg: 'Nginx is working! HTTP status: {{ http_test.status }}'
