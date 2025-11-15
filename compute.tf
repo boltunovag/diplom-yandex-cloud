@@ -13,7 +13,7 @@ resource "yandex_compute_instance" "bastion" {
 
   boot_disk {
     initialize_params {
-      image_id = "fd827b91d99psvq5fjit"  # Ubuntu 22.04
+      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
       size     = 10
       type     = "network-hdd"
     }
@@ -64,7 +64,7 @@ resource "yandex_compute_instance" "web-1" {
 
   boot_disk {
     initialize_params {
-      image_id = "fd827b91d99psvq5fjit"
+      image_id = "fd8498pb5smsd5ch4gid"
       size     = 10
       type     = "network-hdd"
     }
@@ -100,7 +100,7 @@ resource "yandex_compute_instance" "web-2" {
 
   boot_disk {
     initialize_params {
-      image_id = "fd827b91d99psvq5fjit"
+      image_id = "fd8498pb5smsd5ch4gid"
       size     = 10
       type     = "network-hdd"
     }
