@@ -156,3 +156,75 @@ resource "yandex_compute_instance" "zabbix" {
     preemptible = true
   }
 }
+
+# Elasticsearch Server
+resource "yandex_compute_instance" "elasticsearch" {
+  name        = "elasticsearch"
+  hostname    = "elasticsearch"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores         = 2
+    memory        = 4
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
+      size     = 20
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.private-subnet-a.id
+    nat                = false
+    security_group_ids = [yandex_vpc_security_group.internal-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}
+
+# Kibana Server
+resource "yandex_compute_instance" "kibana" {
+  name        = "kibana"
+  hostname    = "kibana"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores         = 2
+    memory        = 2
+    core_fraction = 20
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
+      size     = 15
+      type     = "network-hdd"
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.public-subnet-a.id
+    nat                = true
+    security_group_ids = [yandex_vpc_security_group.monitoring-sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+}

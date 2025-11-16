@@ -43,3 +43,15 @@ output "zabbix_internal_ip" {
   description = "Internal IP address of Zabbix server for agents"
   value       = yandex_compute_instance.zabbix.network_interface.0.ip_address
 }
+
+# Elasticsearch internal IP
+output "elasticsearch_internal_ip" {
+  description = "Internal IP address of Elasticsearch server"
+  value       = yandex_compute_instance.elasticsearch.network_interface.0.ip_address
+}
+
+# Kibana external IP
+output "kibana_external_ip" {
+  description = "External IP address of Kibana server"
+  value       = yandex_compute_instance.kibana.network_interface.0.nat_ip_address
+}

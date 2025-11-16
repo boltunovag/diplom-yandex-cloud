@@ -4,6 +4,7 @@
 set -e
 
 BASTION_IP=$(terraform output -raw bastion_external_ip)
+LOAD_BALANCER_IP=$(terraform output -raw load_balancer_ip)
 ZABBIX_IP=$(terraform output -raw zabbix_external_ip)
 
 echo "🚀 Deploying from bastion ($BASTION_IP)..."
@@ -24,24 +25,12 @@ chmod 600 ~/.ssh/yc-ed25519
 
 cd ~/Diplom/ansible
 
-if [ ! -f ansible.cfg ]; then
-    cat > ansible.cfg << 'CFG_EOF'
-[defaults]
-inventory = inventory.yml
-host_key_checking = False
-remote_user = ubuntu
-private_key_file = ~/.ssh/yc-ed25519
+# Экспортируем переменные для плейбука
+export LOAD_BALANCER_IP='$LOAD_BALANCER_IP'
+export ZABBIX_IP='$ZABBIX_IP'
 
-[ssh_connection]
-ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
-CFG_EOF
-fi
+echo "🎯 Running complete deployment..."
+ansible-playbook deploy-all.yml
 
-echo "🔍 Testing connectivity..."
-ansible all -m ping
-
-echo "🚀 Deploying web servers..."
-ansible-playbook setup-webservers.yml
-
-echo "✅ Deployment completed!"
+echo "✅ All playbooks executed successfully!"
 EOF
