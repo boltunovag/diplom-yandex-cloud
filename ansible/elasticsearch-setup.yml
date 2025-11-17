@@ -1,0 +1,64 @@
+---
+- name: Install Elasticsearch
+  hosts: elasticsearch
+  become: yes
+  
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Add Elasticsearch GPG key
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+
+    - name: Add Elasticsearch repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        state: present
+        filename: elasticsearch
+
+    - name: Install Elasticsearch
+      apt:
+        name: elasticsearch
+        state: present
+
+    - name: Configure Elasticsearch
+      copy:
+        content: |
+          cluster.name: diplom-cluster
+          node.name: "{{ inventory_hostname }}"
+          network.host: 0.0.0.0
+          http.port: 9200
+          discovery.type: single-node
+        dest: /etc/elasticsearch/elasticsearch.yml
+        owner: elasticsearch
+        group: elasticsearch
+        mode: '0640'
+
+    - name: Start and enable Elasticsearch
+      systemd:
+        name: elasticsearch
+        state: started
+        enabled: yes
+
+    - name: Wait for Elasticsearch to start
+      wait_for:
+        port: 9200
+        host: "127.0.0.1"
+        timeout: 60
+
+    - name: Test Elasticsearch
+      uri:
+        url: http://localhost:9200
+        method: GET
+      register: es_result
+
+    - debug:
+        var: es_result.json

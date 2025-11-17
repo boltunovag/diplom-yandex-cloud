@@ -14,6 +14,16 @@ all:
     monitoring:
       hosts:
         zabbix:
-          ansible_host: zabbix.ru-central1.internal 
-          ansible_user: ubuntu        
+          ansible_host: zabbix.ru-central1.internal
+          ansible_user: ubuntu
+          ansible_python_interpreter: /usr/bin/python3
+    elk:
+      hosts:
+        elasticsearch:
+          ansible_host: elasticsearch.ru-central1.internal
+          ansible_user: ubuntu
+          ansible_python_interpreter: /usr/bin/python3
+        kibana:
+          ansible_host: kibana.ru-central1.internal
+          ansible_user: ubuntu
           ansible_python_interpreter: /usr/bin/python3

@@ -1,0 +1,51 @@
+---
+- name: Install Kibana
+  hosts: kibana
+  become: yes
+  
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Add Elasticsearch GPG key
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+
+    - name: Add Elasticsearch repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        state: present
+        filename: elasticsearch
+
+    - name: Install Kibana
+      apt:
+        name: kibana
+        state: present
+
+    - name: Configure Kibana
+      copy:
+        content: |
+          server.port: 5601
+          server.host: "0.0.0.0"
+          elasticsearch.hosts: ["http://elasticsearch.ru-central1.internal:9200"] 
+        dest: /etc/kibana/kibana.yml
+        owner: kibana
+        group: kibana
+        mode: '0640'
+
+    - name: Start and enable Kibana
+      systemd:
+        name: kibana
+        state: started
+        enabled: yes
+
+    - name: Wait for Kibana to start
+      wait_for:
+        port: 5601
+        host: "127.0.0.1"
+        timeout: 60
+
+    - debug:
+        msg: "Kibana available at http://{{ ansible_host }}:5601"
