@@ -104,6 +104,8 @@
       shell: |
         cd /opt/zabbix
         docker-compose up -d
+      args:
+        chdir: /opt/zabbix
 
     - name: Wait for Zabbix to start
       wait_for:
@@ -125,11 +127,5 @@
           🌐 Access URL: http://{{ ansible_host }}/
           🔑 Login: Admin
           🔒 Password: zabbix
-    - name: Add ubuntu user to docker group
-      user:
-        name: ubuntu
-        groups: docker
-        append: yes
 
-    - name: Apply group changes
-      shell: newgrp docker
+    # УБРАНА проблемная задача 'Apply group changes'
