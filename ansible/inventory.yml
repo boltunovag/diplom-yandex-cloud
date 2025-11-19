@@ -1,29 +1,16 @@
----
+# ansible/inventory.yml
 all:
   children:
     webservers:
       hosts:
-        web-1:
-          ansible_host: web-1.ru-central1.internal
-          ansible_user: ubuntu
-          ansible_python_interpreter: /usr/bin/python3
-        web-2:
-          ansible_host: web-2.ru-central1.internal
-          ansible_user: ubuntu
-          ansible_python_interpreter: /usr/bin/python3
+        web-1.ru-central1.internal:
+        web-2.ru-central1.internal:
+
+    elasticsearch:
+      hosts:
+        elasticsearch.ru-central1.internal:
+
     monitoring:
       hosts:
-        zabbix:
-          ansible_host: zabbix.ru-central1.internal
-          ansible_user: ubuntu
-          ansible_python_interpreter: /usr/bin/python3
-    elk:
-      hosts:
-        elasticsearch:
-          ansible_host: elasticsearch.ru-central1.internal
-          ansible_user: ubuntu
-          ansible_python_interpreter: /usr/bin/python3
-        kibana:
-          ansible_host: kibana.ru-central1.internal
-          ansible_user: ubuntu
-          ansible_python_interpreter: /usr/bin/python3
+        zabbix.ru-central1.internal:
+        kibana.ru-central1.internal:
