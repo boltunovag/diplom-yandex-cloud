@@ -5,11 +5,9 @@ all:
       hosts:
         web-1.ru-central1.internal:
         web-2.ru-central1.internal:
-
     elasticsearch:
       hosts:
         elasticsearch.ru-central1.internal:
-
     monitoring:
       hosts:
         zabbix.ru-central1.internal:
