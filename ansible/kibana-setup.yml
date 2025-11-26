@@ -1,51 +1,66 @@
 ---
-- name: Install Kibana
-  hosts: kibana
+- name: Deploy Kibana via Docker
+  hosts: kibana.ru-central1.internal
   become: yes
-  
   tasks:
-    - name: Update apt package cache
+    - name: Install Docker prerequisites
       apt:
-        update_cache: yes
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
 
-    - name: Add Elasticsearch GPG key
+    - name: Add Docker GPG key
       apt_key:
-        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
-    - name: Add Elasticsearch repository
+    - name: Add Docker repository
       apt_repository:
-        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
         state: present
-        filename: elasticsearch
+        filename: docker
 
-    - name: Install Kibana
+    - name: Install Docker
       apt:
-        name: kibana
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
         state: present
 
-    - name: Configure Kibana
-      copy:
-        content: |
-          server.port: 5601
-          server.host: "0.0.0.0"
-          elasticsearch.hosts: ["http://elasticsearch.ru-central1.internal:9200"] 
-        dest: /etc/kibana/kibana.yml
-        owner: kibana
-        group: kibana
-        mode: '0640'
-
-    - name: Start and enable Kibana
+    - name: Ensure Docker is started
       systemd:
-        name: kibana
+        name: docker
         state: started
         enabled: yes
 
-    - name: Wait for Kibana to start
-      wait_for:
-        port: 5601
-        host: "127.0.0.1"
-        timeout: 60
+    - name: Install python3-docker
+      apt:
+        name: python3-docker
+        state: present
 
-    - debug:
-        msg: "Kibana available at http://{{ ansible_host }}:5601"
+    - name: Run Kibana container
+      docker_container:
+        name: kibana
+        image: docker.elastic.co/kibana/kibana:7.17.21
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "5601:5601"
+        env:
+          ELASTICSEARCH_HOSTS: "http://elasticsearch.ru-central1.internal:9200"
+          SERVER_HOST: "0.0.0.0"
+
+    - name: Wait for Kibana to respond
+      uri:
+        url: http://localhost:5601
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 20
+      delay: 6

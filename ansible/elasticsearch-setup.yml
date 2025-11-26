@@ -1,64 +1,93 @@
 ---
-- name: Install Elasticsearch
-  hosts: elasticsearch
+- name: Deploy Elasticsearch via Docker
+  hosts: elasticsearch.ru-central1.internal
   become: yes
-  
   tasks:
-    - name: Update apt package cache
+    - name: Install Docker prerequisites
       apt:
-        update_cache: yes
-
-    - name: Install Java
-      apt:
-        name: openjdk-11-jdk
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
         state: present
 
-    - name: Add Elasticsearch GPG key
+    - name: Add Docker GPG key
       apt_key:
-        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
-    - name: Add Elasticsearch repository
+    - name: Add Docker repository
       apt_repository:
-        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
         state: present
-        filename: elasticsearch
+        filename: docker
 
-    - name: Install Elasticsearch
+    - name: Install Docker
       apt:
-        name: elasticsearch
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
         state: present
 
-    - name: Configure Elasticsearch
-      copy:
-        content: |
-          cluster.name: diplom-cluster
-          node.name: "{{ inventory_hostname }}"
-          network.host: 0.0.0.0
-          http.port: 9200
-          discovery.type: single-node
-        dest: /etc/elasticsearch/elasticsearch.yml
-        owner: elasticsearch
-        group: elasticsearch
-        mode: '0640'
-
-    - name: Start and enable Elasticsearch
+    - name: Ensure Docker is started
       systemd:
-        name: elasticsearch
+        name: docker
         state: started
         enabled: yes
 
-    - name: Wait for Elasticsearch to start
-      wait_for:
-        port: 9200
-        host: "127.0.0.1"
-        timeout: 60
+    - name: Install python3-docker
+      apt:
+        name: python3-docker
+        state: present
 
-    - name: Test Elasticsearch
+    - name: Create Elasticsearch data directory
+      file:
+        path: /opt/elasticsearch/data
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Run Elasticsearch container
+      docker_container:
+        name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.21
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "9200:9200"
+        volumes:
+          - /opt/elasticsearch//usr/share/elasticsearch/data
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+        ulimits:
+          - name: nofile
+            soft: 1048576
+            hard: 1048576
+          - name: memlock
+            soft: -1
+            hard: -1
+        sysctls:
+          vm.max_map_count: 262144
+
+    - name: Wait for Elasticsearch to respond
       uri:
         url: http://localhost:9200
         method: GET
-      register: es_result
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 5
 
-    - debug:
-        var: es_result.json
+    - name: Set vm.max_map_count for Elasticsearch
+      sysctl:
+        name: vm.max_map_count
+        value: 262144
+        sysctl_set: yes
+        state: present
+        reload: yes
