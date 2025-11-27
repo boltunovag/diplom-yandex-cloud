@@ -43,10 +43,10 @@
         name: python3-docker
         state: present
 
-    - name: Run Kibana container
+    - name: Run Kibana container from Docker Hub
       docker_container:
         name: kibana
-        image: docker.elastic.co/kibana/kibana:7.17.21
+        image: kibana:7.17.21
         state: started
         restart_policy: unless-stopped
         ports:
@@ -54,6 +54,7 @@
         env:
           ELASTICSEARCH_HOSTS: "http://elasticsearch.ru-central1.internal:9200"
           SERVER_HOST: "0.0.0.0"
+        container_default_behavior: compatibility
 
     - name: Wait for Kibana to respond
       uri:

@@ -1,28 +1,53 @@
-# ansible/filebeat-webservers.yml
 ---
-- name: Install and configure Filebeat on web servers
+- name: Deploy Filebeat via Docker on web servers
   hosts: webservers
   become: yes
   tasks:
-    - name: Update apt package cache
+    - name: Install Docker prerequisites
       apt:
-        update_cache: yes
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
 
-    - name: Add Elastic GPG key
+    - name: Add Docker GPG key
       apt_key:
-        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
-    - name: Add Elastic repository
+    - name: Add Docker repository
       apt_repository:
-        repo: "deb https://artifacts.elastic.co/packages/7.x/apt stable main"
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
         state: present
-        filename: elastic-7.x
+        filename: docker
 
-    - name: Install Filebeat
+    - name: Install Docker
       apt:
-        name: filebeat
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
         state: present
+
+    - name: Ensure Docker is started
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install python3-docker
+      apt:
+        name: python3-docker
+        state: present
+
+    - name: Create Filebeat configuration directory
+      file:
+        path: /etc/filebeat
+        state: directory
+        mode: '0755'
 
     - name: Configure Filebeat
       copy:
@@ -34,32 +59,22 @@
               paths:
                 - /var/log/nginx/access.log
                 - /var/log/nginx/error.log
-              parsers:
-                - ndjson:
-                    overwrite_keys: true
-                    add_error_key: true
-
           output.elasticsearch:
-            hosts: ["elasticsearch.ru-central1.internal:9200"]
-
-          # Optional: set name for easier identification
-          filebeat.config.modules:
-            path: ${path.config}/modules.d/*.yml
-            reload.enabled: false
+            hosts: ["http://elasticsearch.ru-central1.internal:9200"]
+          logging.level: info
         dest: /etc/filebeat/filebeat.yml
         owner: root
         group: root
         mode: '0644'
-      notify: restart filebeat
 
-    - name: Enable and start Filebeat
-      systemd:
+    - name: Run Filebeat container
+      docker_container:
         name: filebeat
-        enabled: yes
+        image: docker.io/elastic/filebeat:7.17.21
         state: started
-
-  handlers:
-    - name: restart filebeat
-      systemd:
-        name: filebeat
-        state: restarted
+        restart_policy: unless-stopped
+        volumes:
+          - /var/log/nginx:/var/log/nginx:ro
+          - /etc/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+        user: root
+        container_default_behavior: compatibility

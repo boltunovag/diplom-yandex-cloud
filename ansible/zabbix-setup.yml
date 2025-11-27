@@ -1,6 +1,7 @@
 ---
+
 - name: Install Zabbix Server using Docker (simplified)
-  hosts: monitoring
+  hosts: zabbix.ru-central1.internal
   become: yes
   
   tasks:

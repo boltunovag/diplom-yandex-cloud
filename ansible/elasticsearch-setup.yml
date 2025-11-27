@@ -43,36 +43,39 @@
         name: python3-docker
         state: present
 
+    - name: Set vm.max_map_count for Elasticsearch
+      sysctl:
+        name: vm.max_map_count
+        value: "262144"
+        sysctl_set: yes
+        state: present
+        reload: yes
+
     - name: Create Elasticsearch data directory
       file:
         path: /opt/elasticsearch/data
         state: directory
-        owner: 1000
-        group: 1000
+        owner: "1000"
+        group: "1000"
 
     - name: Run Elasticsearch container
       docker_container:
         name: elasticsearch
-        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.21
+        image: elasticsearch:7.17.21
         state: started
         restart_policy: unless-stopped
         ports:
           - "9200:9200"
         volumes:
-          - /opt/elasticsearch//usr/share/elasticsearch/data
+          - /opt/elasticsearch/data:/usr/share/elasticsearch/data
         env:
           discovery.type: single-node
           xpack.security.enabled: "false"
           ES_JAVA_OPTS: "-Xms1g -Xmx1g"
         ulimits:
-          - name: nofile
-            soft: 1048576
-            hard: 1048576
-          - name: memlock
-            soft: -1
-            hard: -1
-        sysctls:
-          vm.max_map_count: 262144
+          - "nofile:1048576:1048576"
+          - "memlock:-1:-1"
+        container_default_behavior: compatibility
 
     - name: Wait for Elasticsearch to respond
       uri:
@@ -83,11 +86,3 @@
       until: result.status == 200
       retries: 30
       delay: 5
-
-    - name: Set vm.max_map_count for Elasticsearch
-      sysctl:
-        name: vm.max_map_count
-        value: 262144
-        sysctl_set: yes
-        state: present
-        reload: yes
