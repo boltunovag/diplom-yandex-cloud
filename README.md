@@ -78,12 +78,13 @@ Elastic изменил политику доступа к своим репоз�
 - Filebeat использует образ `docker.io/elastic/filebeat`
 - Для обхода проблем с доступом применены настройки `container_default_behavior: compatibility`
 
-### Проблема с vm.max_map_count для Elasticsearch
+### Проблема с "vm.max_map_count" для Elasticsearch
 **Симптом:**  
 sysctl "vm.max_map_count" is not in a separate kernel namespace
 
 **Решение:**  
 Добавлена задача установки параметра ядра до запуска контейнера:
+
 ```yaml
 - name: Set vm.max_map_count for Elasticsearch
   sysctl:
@@ -93,11 +94,13 @@ sysctl "vm.max_map_count" is not in a separate kernel namespace
     state: present
     reload: yes
 
+
 **Симптом:**
 Host key verification failed при попытке подключиться к web-1.ru-central1.internal
 
 **Решение:**
 Все Ansible-плейбуки запускаются с bastion-хоста, что позволяет использовать FQDN-имена без ProxyCommand. Для локального доступа используйте:
+
   ```bash
      ssh -i ~/.ssh/yc-ed25519 ubuntu@$(terraform output -raw bastion_external_ip)
      ssh ubuntu@web-1.ru-central1.internal
