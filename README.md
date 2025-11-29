@@ -93,7 +93,7 @@ sysctl "vm.max_map_count" is not in a separate kernel namespace
     sysctl_set: yes
     state: present
     reload: yes
-
+    ```
 
 **Симптом:**
 Host key verification failed при попытке подключиться к web-1.ru-central1.internal
@@ -104,7 +104,7 @@ Host key verification failed при попытке подключиться к w
   ```bash
      ssh -i ~/.ssh/yc-ed25519 ubuntu@$(terraform output -raw bastion_external_ip)
      ssh ubuntu@web-1.ru-central1.internal
-
+     ```
 
 ## 🚀 Быстрый старт
 
