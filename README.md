@@ -116,8 +116,8 @@ Host key verification failed при попытке подключиться к w
 1. **Клонируйте репозиторий:**
    ```bash
    git clone https://github.com/boltunovag/diplom-yandex-cloud 
-   cd diplom-yandex-cloud
-```
+   cd diplom-yandex-cloud```
+
 
 2. Подготовьте файлы с ключами:
 - Поместите файл ключа сервисного аккаунта (key.json) в корень проекта.
@@ -129,17 +129,16 @@ Host key verification failed при попытке подключиться к w
 
 1. Инициализация Terraform:
    ```bash
-    terraform init
-```
+    terraform init```
 
 2. Просмотр плана развертывания:
    ```bash
-    terraform plan
-```
+    terraform plan```
+
 3. Применение конфигурации:
    ```bash
-    terraform apply
-```
+    terraform apply```
+
 После успешного выполнения команды terraform apply в выводе появятся внешние IP-адреса Bastion и Zabbix.
 
 ### ⚙️ Настройка с помощью Ansible
