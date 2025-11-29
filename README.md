@@ -85,15 +85,14 @@ sysctl "vm.max_map_count" is not in a separate kernel namespace
 **Решение:**  
 Добавлена задача установки параметра ядра до запуска контейнера:
 
-```yaml
-- name: Set vm.max_map_count for Elasticsearch
+`- name: Set vm.max_map_count for Elasticsearch
   sysctl:
     name: vm.max_map_count
     value: "262144"
     sysctl_set: yes
     state: present
-    reload: yes
-    ```
+    reload: yes`
+    
 
 **Симптом:**
 Host key verification failed при попытке подключиться к web-1.ru-central1.internal
@@ -101,10 +100,10 @@ Host key verification failed при попытке подключиться к w
 **Решение:**
 Все Ansible-плейбуки запускаются с bastion-хоста, что позволяет использовать FQDN-имена без ProxyCommand. Для локального доступа используйте:
 
-  ```bash
-     ssh -i ~/.ssh/yc-ed25519 ubuntu@$(terraform output -raw bastion_external_ip)
-     ssh ubuntu@web-1.ru-central1.internal
-     ```
+  
+     `ssh -i ~/.ssh/yc-ed25519 ubuntu@$(terraform output -raw bastion_external_ip)
+     ssh ubuntu@web-1.ru-central1.internal`
+     
 
 ## 🚀 Быстрый старт
 
@@ -117,9 +116,8 @@ Host key verification failed при попытке подключиться к w
 ### Подготовка к развертыванию
 
 1. **Клонируйте репозиторий:**
-   ```bash
-   git clone https://github.com/boltunovag/diplom-yandex-cloud 
-   cd diplom-yandex-cloud```
+   `git clone https://github.com/boltunovag/diplom-yandex-cloud 
+   cd diplom-yandex-cloud`
 
 
 2. Подготовьте файлы с ключами:
