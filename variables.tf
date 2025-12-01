@@ -1,10 +1,11 @@
-variable "cloud_id" {
+
+variable "yc_cloud_id" {
   description = "Yandex cloud ID"
   type        = string
   sensitive   = true
 }
 
-variable "folder_id" {
+variable "yc_folder_id" {
   description = "Yandex cloud folder ID"
   type        = string
   sensitive   = true

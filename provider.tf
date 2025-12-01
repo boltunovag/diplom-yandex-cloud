@@ -2,25 +2,15 @@ terraform {
   required_providers {
     yandex = {
       source  = "yandex-cloud/yandex"
-      version = "~> 0.80"
+      version = ">= 0.170.0"
     }
   }
 }
 
-#provider "yandex" {
-#  cloud_id                 = var.cloud_id
-#  folder_id                = var.folder_id
-#  zone                     = "ru-central1-a"
-#  service_account_key_file = var.service_account_key_file
-#}
-
 provider "yandex" {
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-  zone      = "ru-central1-a"
   service_account_key_file = var.service_account_key_file
-  
-  # Увеличим таймауты
-  endpoint = "api.cloud.yandex.net:443"
-  max_retries = 5
+  cloud_id  = var.yc_cloud_id
+  folder_id = var.yc_folder_id
+  zone      = "ru-central1-a"
+  max_retries = 3
 }
