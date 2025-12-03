@@ -38,5 +38,8 @@ ansible-playbook kibana-setup.yml
 echo "Installing FileBeat..." 
 ansible-playbook filebeat-webservers.yml
 
+echo "🔧 Configuring Zabbix automation..."
+ansible-playbook zabbix-automation.yml
+
 echo "✅ Deployment completed!"
 EOF
