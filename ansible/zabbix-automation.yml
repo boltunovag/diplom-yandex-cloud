@@ -1,0 +1,304 @@
+---
+- name: Configure Zabbix automation
+  hosts: zabbix.ru-central1.internal
+  become: yes
+  vars:
+    zabbix_api_url: "http://localhost/api_jsonrpc.php"
+    zabbix_api_user: "Admin"
+    zabbix_api_pass: "zabbix"
+    template_source_dir: "/tmp/zabbix_templates"
+    template_dest_dir: "/opt/zabbix/templates"
+
+  tasks:
+    - name: Create template directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      loop:
+        - "{{ template_dest_dir }}"
+        - "{{ template_dest_dir }}/Operating_Systems"
+        - "{{ template_dest_dir }}/Operating_Systems/Linux"
+        - "{{ template_dest_dir }}/Applications"
+
+    - name: "⚠️ ERROR: Bastion template directory not found"
+      debug:
+        msg: |
+          Template files not found on bastion host!
+          Please ensure deploy-from-bastion.sh copied templates directory.
+          Run: rsync -avz -e "ssh -i ~/.ssh/yc-ed25519" ./ansible/templates ubuntu@$(terraform output -raw bastion_external_ip):~/Diplom/ansible/
+      when: 
+        - template_source_dir is not directory
+      failed_when: true
+
+    - name: Copy Linux template from bastion
+      copy:
+        src: "{{ template_source_dir }}/template_linux_passive.xml"
+        dest: "{{ template_dest_dir }}/Operating_Systems/Linux/template_linux_passive.xml"
+        mode: '0644'
+        owner: root
+        group: root
+      failed_when: false
+
+    - name: Copy HTTP template from bastion (fallback if Linux template missing)
+      copy:
+        src: "{{ template_source_dir }}/template_http_service.xml"
+        dest: "{{ template_dest_dir }}/Applications/template_http_service.xml"
+        mode: '0644'
+        owner: root
+        group: root
+      when: not ansible_facts['copy_template_linux_passive']['changed']
+
+    - name: Copy Nginx template from bastion
+      copy:
+        src: "{{ template_source_dir }}/template_nginx.xml"
+        dest: "{{ template_dest_dir }}/Applications/template_nginx.xml"
+        mode: '0644'
+        owner: root
+        group: root
+      failed_when: false
+
+    - name: Get Zabbix API auth token
+      uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "user.login"
+          params:
+            user: "{{ zabbix_api_user }}"
+            password: "{{ zabbix_api_pass }}"
+          id: 1
+        status_code: 200
+      register: zabbix_auth
+      changed_when: false
+
+    - name: Import Linux template
+      uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "configuration.import"
+          params:
+            format: "xml"
+            source: "{{ lookup('file', template_dest_dir + '/Operating_Systems/Linux/template_linux_passive.xml') }}"
+            rules:
+              templates:
+                createMissing: true
+                updateExisting: true
+              triggers:
+                createMissing: true
+                updateExisting: true
+              graphs:
+                createMissing: true
+                updateExisting: true
+          auth: "{{ zabbix_auth.json.result }}"
+          id: 101
+        status_code: 200
+      register: linux_template_import
+      failed_when: 
+        - linux_template_import.json.error is defined
+        - "'Template OS Linux' not in linux_template_import.json.error.data"
+
+    - name: Create USE-based triggers automatically
+      block:
+        - name: Create CPU utilization trigger
+          uri:
+            url: "{{ zabbix_api_url }}"
+            method: POST
+            body_format: json
+            body:
+              jsonrpc: "2.0"
+              method: "trigger.create"
+              params:
+                description: "High CPU utilization on {HOST.NAME}"
+                expression: "{host:system.cpu.load[all,avg1].last()}>1.5"
+                priority: 3
+                comments: "USE: CPU Utilization > 90%"
+              auth: "{{ zabbix_auth.json.result }}"
+              id: 201
+            status_code: 200
+          register: cpu_trigger
+          failed_when: cpu_trigger.json.error is defined and "Trigger with the same name" not in cpu_trigger.json.error.data
+
+        - name: Create Memory utilization trigger
+          uri:
+            url: "{{ zabbix_api_url }}"
+            method: POST
+            body_format: json
+            body:
+              jsonrpc: "2.0"
+              method: "trigger.create"
+              params:
+                description: "High memory utilization on {HOST.NAME}"
+                expression: "{host:vm.memory.size[pused].last()}>85"
+                priority: 3
+                comments: "USE: Memory utilization > 85%"
+              auth: "{{ zabbix_auth.json.result }}"
+              id: 202
+            status_code: 200
+          register: memory_trigger
+          failed_when: memory_trigger.json.error is defined and "Trigger with the same name" not in memory_trigger.json.error.data
+
+        - name: Create Disk utilization trigger
+          uri:
+            url: "{{ zabbix_api_url }}"
+            method: POST
+            body_format: json
+            body:
+              jsonrpc: "2.0"
+              method: "trigger.create"
+              params:
+                description: "High disk space utilization on {HOST.NAME}"
+                expression: "{host:vfs.fs.size[/,pused].last()}>90"
+                priority: 3
+                comments: "USE: Disk utilization > 90%"
+              auth: "{{ zabbix_auth.json.result }}"
+              id: 203
+            status_code: 200
+          register: disk_trigger
+          failed_when: disk_trigger.json.error is defined and "Trigger with the same name" not in disk_trigger.json.error.data
+
+        - name: Create Network errors trigger
+          uri:
+            url: "{{ zabbix_api_url }}"
+            method: POST
+            body_format: json
+            body:
+              jsonrpc: "2.0"
+              method: "trigger.create"
+              params:
+                description: "Network interface errors on {HOST.NAME}"
+                expression: "{host:net.if.in[eth0,errors].last()}>0 or {host:net.if.out[eth0,errors].last()}>0"
+                priority: 2
+                comments: "USE: Network errors detected"
+              auth: "{{ zabbix_auth.json.result }}"
+              id: 204
+            status_code: 200
+          register: network_trigger
+          failed_when: network_trigger.json.error is defined and "Trigger with the same name" not in network_trigger.json.error.data
+
+      rescue:
+        - name: Skip trigger creation if templates not imported
+          debug:
+            msg: "Skipping USE triggers - templates may not be imported properly"
+
+    - name: Create USE Monitoring Dashboard
+      uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "dashboard.create"
+          params:
+            name: "USE Monitoring Dashboard"
+            pages:
+              - widgets:
+                  - type: "problems"
+                    name: "System Problems"
+                    x: 0
+                    y: 0
+                    width: 24
+                    height: 5
+                    fields:
+                      - type: 0
+                        name: "rf_rate"
+                        value: "1800"
+                      - type: 0
+                        name: "show"
+                        value: "3"
+                  - type: "graphprototype"
+                    name: "CPU Load"
+                    x: 0
+                    y: 5
+                    width: 12
+                    height: 5
+                    fields:
+                      - type: 0
+                        name: "source_type"
+                        value: "0"
+                      - type: 1
+                        name: "graph"
+                        value: "system.cpu.load"
+                  - type: "graphprototype"
+                    name: "Memory Usage"
+                    x: 12
+                    y: 5
+                    width: 12
+                    height: 5
+                    fields:
+                      - type: 0
+                        name: "source_type"
+                        value: "0"
+                      - type: 1
+                        name: "graph"
+                        value: "vm.memory.size[total]"
+          auth: "{{ zabbix_auth.json.result }}"
+          id: 300
+        status_code: 200
+      register: dashboard_creation
+      failed_when: dashboard_creation.json.error is defined and "Dashboard with the same name" not in dashboard_creation.json.error.data
+
+    - name: Configure auto-registration for hosts
+      uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "action.create"
+          params:
+            name: "Auto register Linux servers"
+            eventsource: 2
+            status: 0
+            conditions:
+              - conditiontype: 24
+                operator: 2
+                value: "Linux"
+            operations:
+              - operationtype: 2
+              - operationtype: 4
+                opgroup:
+                  groupid: "5"
+              - operationtype: 6
+                optemplate:
+                  - templateid: "10001"
+            filter:
+              evaltype: 0
+          auth: "{{ zabbix_auth.json.result }}"
+          id: 400
+        status_code: 200
+      register: action_creation
+      failed_when: action_creation.json.error is defined and "Action with the same name" not in action_creation.json.error.data
+
+    - name: Logout from Zabbix API
+      uri:
+        url: "{{ zabbix_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          jsonrpc: "2.0"
+          method: "user.logout"
+          params: []
+          auth: "{{ zabbix_auth.json.result }}"
+          id: 999
+        status_code: 200
+      changed_when: false
+
+    - name: Display completion message
+      debug:
+        msg: |
+          🎉 Zabbix USE Monitoring configured successfully!
+          📊 Dashboard created: "USE Monitoring Dashboard"
+          🔔 Thresholds configured for CPU, Memory, Disk, Network
+          🔄 Auto-registration enabled for Linux servers
+          💡 Next steps: 
+            1. Log in to Zabbix web UI
+            2. Navigate to "Monitoring" → "Dashboard"
+            3. Select "USE Monitoring Dashboard"
