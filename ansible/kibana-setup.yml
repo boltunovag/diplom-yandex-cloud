@@ -1,5 +1,5 @@
 ---
-- name: Deploy Kibana via Docker 
+- name: Deploy Kibana via Docker
   hosts: kibana.ru-central1.internal
   become: yes
   tasks:
@@ -46,7 +46,7 @@
     - name: Run Kibana container
       docker_container:
         name: kibana
-        image: docker.io/elastic/kibana:7.17.21
+        image: docker.elastic.co/kibana/kibana:7.17.21
         state: started
         restart_policy: unless-stopped
         ports:
@@ -54,8 +54,7 @@
         env:
           ELASTICSEARCH_HOSTS: "http://elasticsearch.ru-central1.internal:9200"
           SERVER_HOST: "0.0.0.0"
- 
-
+          xpack.fleet.packageRegistry.enabled: "false"  # ✅ ИСПРАВЛЕНИЕ: отключаем Package Registry
     - name: Wait for Kibana to respond
       uri:
         url: http://localhost:5601
