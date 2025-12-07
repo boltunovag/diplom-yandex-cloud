@@ -1,54 +1,14 @@
 ---
-
-- name: Install Zabbix Server using Docker (simplified)
+- name: Install Zabbix Server using Docker
   hosts: zabbix.ru-central1.internal
   become: yes
-  
   tasks:
-    - name: Update apt package cache
+    # УДАЛИТЕ все задачи по установке Docker отсюда!
+    # ОСТАВЬТЕ ТОЛЬКО ЭТО:
+    
+    - name: Update apt cache
       apt:
         update_cache: yes
-
-    - name: Install Docker prerequisites
-      apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-        state: present
-
-    - name: Add Docker GPG key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
-        state: present
-        filename: docker
-
-    - name: Install Docker
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-        state: present
-
-    - name: Start and enable Docker service
-      systemd:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Install Docker Compose
-      get_url:
-        url: https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64
-        dest: /usr/local/bin/docker-compose
-        mode: '0755'
 
     - name: Create Zabbix directory
       file:
@@ -72,7 +32,6 @@
                 - POSTGRES_DB=zabbix
               depends_on:
                 - zabbix-database
-
             zabbix-database:
               image: postgres:15-alpine
               environment:
@@ -81,7 +40,6 @@
                 - POSTGRES_DB=zabbix
               volumes:
                 - zabbix_db_data:/var/lib/postgresql/data
-
             zabbix-web:
               image: zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest
               ports:
@@ -96,10 +54,26 @@
               depends_on:
                 - zabbix-server
                 - zabbix-database
-
           volumes:
             zabbix_db_data:
         dest: /opt/zabbix/docker-compose.yml
+
+    - name: Check if Docker is installed
+      stat:
+        path: /usr/bin/docker
+      register: docker_installed
+
+    - name: Install Docker.io if not present
+      apt:
+        name: docker.io
+        state: present
+      when: not docker_installed.stat.exists
+
+    - name: Ensure Docker is started
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
 
     - name: Run Zabbix stack with Docker Compose
       shell: |
@@ -112,15 +86,8 @@
       wait_for:
         port: 80
         host: 127.0.0.1
-        timeout: 120
+        timeout: 180
 
-    - name: Show Zabbix status
-      shell: docker ps
-      register: docker_ps
-      
-    - debug:
-        var: docker_ps.stdout
-        
     - name: Display Zabbix access info
       debug:
         msg: |
@@ -128,5 +95,3 @@
           🌐 Access URL: http://{{ ansible_host }}/
           🔑 Login: Admin
           🔒 Password: zabbix
-
-    # УБРАНА проблемная задача 'Apply group changes'
