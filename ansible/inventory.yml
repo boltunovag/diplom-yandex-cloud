@@ -8,7 +8,9 @@ all:
     elasticsearch:
       hosts:
         elasticsearch.ru-central1.internal:
+    kibana:
+      hosts:
+        kibana.ru-central1.internal:
     monitoring:
       hosts:
         zabbix.ru-central1.internal:
-        kibana.ru-central1.internal:

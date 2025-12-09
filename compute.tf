@@ -27,21 +27,7 @@ resource "yandex_compute_instance" "bastion" {
 
   metadata = {
     ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
-    user-data = <<-EOF
-      #cloud-config
-      users:
-        - name: ubuntu
-          ssh-authorized-keys:
-            - ${file("~/.ssh/yc-ed25519.pub")}
-      package_update: true
-      package_upgrade: true
-      packages:
-        - ansible
-        - git
-      runcmd:
-        - [ansible, --version]
-        - [echo, "Cloud-init completed successfully"]
-      EOF
+    user-data = file("bastion-user-data.yaml")
   }
 
   scheduling_policy {

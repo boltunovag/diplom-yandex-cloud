@@ -3,12 +3,22 @@
   hosts: zabbix.ru-central1.internal
   become: yes
   tasks:
-    # УДАЛИТЕ все задачи по установке Docker отсюда!
-    # ОСТАВЬТЕ ТОЛЬКО ЭТО:
-    
     - name: Update apt cache
       apt:
         update_cache: yes
+
+    - name: Install Docker and docker-compose
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Ensure Docker is started
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
 
     - name: Create Zabbix directory
       file:
@@ -57,23 +67,6 @@
           volumes:
             zabbix_db_data:
         dest: /opt/zabbix/docker-compose.yml
-
-    - name: Check if Docker is installed
-      stat:
-        path: /usr/bin/docker
-      register: docker_installed
-
-    - name: Install Docker.io if not present
-      apt:
-        name: docker.io
-        state: present
-      when: not docker_installed.stat.exists
-
-    - name: Ensure Docker is started
-      systemd:
-        name: docker
-        state: started
-        enabled: yes
 
     - name: Run Zabbix stack with Docker Compose
       shell: |
