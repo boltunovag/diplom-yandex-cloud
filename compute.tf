@@ -6,34 +6,36 @@ resource "yandex_compute_instance" "bastion" {
   zone        = "ru-central1-a"
 
   resources {
-    cores  = 2
-    memory = 2
+    cores         = 2
+    memory        = 2
     core_fraction = 20
   }
 
   boot_disk {
     initialize_params {
-      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
+      image_id = "fd8498pb5smsd5ch4gid" # Ubuntu 22.04
       size     = 10
       type     = "network-hdd"
     }
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.public-subnet-a.id
-    nat       = true
+    subnet_id          = yandex_vpc_subnet.public-subnet-a.id
+    nat                = true
     security_group_ids = [yandex_vpc_security_group.bastion-sg.id]
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
-    user-data = file("bastion-user-data.yaml")
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}"
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }
+
+# Общий user-data для всех ВМ
 
 # Веб-сервер 1
 resource "yandex_compute_instance" "web-1" {
@@ -63,11 +65,12 @@ resource "yandex_compute_instance" "web-1" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}" # ДОБАВЛЕНО
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }
 
@@ -99,11 +102,12 @@ resource "yandex_compute_instance" "web-2" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}" # ДОБАВЛЕНО
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }
 
@@ -135,11 +139,12 @@ resource "yandex_compute_instance" "zabbix" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}" # ДОБАВЛЕНО
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }
 
@@ -158,7 +163,7 @@ resource "yandex_compute_instance" "elasticsearch" {
 
   boot_disk {
     initialize_params {
-      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
+      image_id = "fd8498pb5smsd5ch4gid" # Ubuntu 22.04
       size     = 20
       type     = "network-hdd"
     }
@@ -171,11 +176,12 @@ resource "yandex_compute_instance" "elasticsearch" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}" # ДОБАВЛЕНО
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }
 
@@ -194,7 +200,7 @@ resource "yandex_compute_instance" "kibana" {
 
   boot_disk {
     initialize_params {
-      image_id = "fd8498pb5smsd5ch4gid"  # Ubuntu 22.04
+      image_id = "fd8498pb5smsd5ch4gid" # Ubuntu 22.04
       size     = 15
       type     = "network-hdd"
     }
@@ -207,10 +213,11 @@ resource "yandex_compute_instance" "kibana" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    ssh-keys  = "ubuntu:${file("~/.ssh/yc-ed25519.pub")}"
+    user-data = "${file("bastion-user-data.yaml")}" # ДОБАВЛЕНО
   }
 
   scheduling_policy {
-    preemptible = true
+    preemptible = false # ИЗМЕНЕНО: false для надежности
   }
 }

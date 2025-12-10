@@ -15,7 +15,7 @@ resource "yandex_vpc_subnet" "private-subnet-a" {
   zone           = "ru-central1-a"
   network_id     = yandex_vpc_network.diplom-network.id
   v4_cidr_blocks = ["192.168.20.0/24"]
-  route_table_id = yandex_vpc_route_table.private-route-table.id  # ← ключевая строка
+  route_table_id = yandex_vpc_route_table.private-route-table.id # ← ключевая строка
 }
 
 # NAT Gateway для интернета из приватных подсетей
