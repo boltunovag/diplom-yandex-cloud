@@ -4,7 +4,7 @@ resource "random_id" "suffix" {
   prefix      = "diplom-"
 }
 
-# Security Group для Bastion host
+# Bastion SG
 resource "yandex_vpc_security_group" "bastion-sg" {
   name        = "bastion-sg-${random_id.suffix.hex}"
   description = "Security group for Bastion host"
@@ -15,14 +15,13 @@ resource "yandex_vpc_security_group" "bastion-sg" {
     port           = 22
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
     protocol       = "ANY"
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# Security Group для балансировщика
+# Load Balancer SG
 resource "yandex_vpc_security_group" "loadbalancer-sg" {
   name        = "loadbalancer-sg-${random_id.suffix.hex}"
   description = "Security group for Load Balancer"
@@ -33,14 +32,13 @@ resource "yandex_vpc_security_group" "loadbalancer-sg" {
     port           = 80
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
     protocol       = "ANY"
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# Security Group для внутренних серверов
+# Internal SG
 resource "yandex_vpc_security_group" "internal-sg" {
   name        = "internal-sg-${random_id.suffix.hex}"
   description = "Security group for internal servers"
@@ -61,13 +59,20 @@ resource "yandex_vpc_security_group" "internal-sg" {
   ingress {
     protocol       = "TCP"
     port           = 80
-    v4_cidr_blocks = ["192.168.0.0/16"]
+    v4_cidr_blocks = ["192.168.10.0/24", "192.168.20.0/24"]
   }
 
   ingress {
     protocol       = "TCP"
     port           = 9200
-    v4_cidr_blocks = ["192.168.10.0/24"]
+    v4_cidr_blocks = ["192.168.10.0/24", "192.168.20.0/24"]
+  }
+
+  ingress {
+    protocol       = "TCP"
+    port           = 9300
+    v4_cidr_blocks = ["192.168.10.0/24", "192.168.20.0/24"]
+    description    = "Elasticsearch transport"
   }
 
   ingress {
@@ -82,7 +87,7 @@ resource "yandex_vpc_security_group" "internal-sg" {
   }
 }
 
-# Security Group для мониторинга
+# Monitoring SG
 resource "yandex_vpc_security_group" "monitoring-sg" {
   name        = "monitoring-sg-${random_id.suffix.hex}"
   description = "Security group for monitoring services"
