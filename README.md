@@ -149,7 +149,7 @@
 ### Ссылки для проверки
 
 * Сайт
-[sait](http://158.160.219.110/)
+[Diplom](http://158.160.219.110/)
 
 * Zabbix
 [Zabbix](http://158.160.123.38/zabbix.php?action=dashboard.view&dashboardid=2)
