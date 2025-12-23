@@ -1,0 +1,44 @@
+---
+- name: Install Docker on all hosts
+  hosts: all
+  become: yes
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install docker.io
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Install Docker Compose
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Ensure Docker is started
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Python Docker module for Ansible
+      apt:
+        name: python3-docker
+        state: present
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Verify Docker installation
+      shell: docker --version
+      register: docker_result
+      changed_when: false
+
+    - debug:
+        msg: "✅ Docker installed: {{ docker_result.stdout }}"

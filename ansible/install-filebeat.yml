@@ -1,0 +1,45 @@
+---
+- name: Install Filebeat from Ubuntu repos
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Search for available filebeat packages
+      shell: apt-cache search filebeat
+      register: available_packages
+      changed_when: false
+
+    - name: Display available packages
+      debug:
+        msg: "Available packages: {{ available_packages.stdout }}"
+
+    - name: Install Filebeat (try different package names)
+      block:
+        - name: Try to install filebeat
+          apt:
+            name: filebeat
+            state: present
+          register: install_result
+          ignore_errors: yes
+
+        - name: Try to install beats
+          apt:
+            name: beats
+            state: present
+          register: install_result2
+          ignore_errors: yes
+          when: install_result is failed
+
+    - name: Check if Filebeat is installed
+      command: which filebeat || dpkg -l | grep filebeat || echo "not installed"
+      register: check_install
+      changed_when: false
+
+    - name: Report installation status
+      debug:
+        msg: "Filebeat installation status: {{ check_install.stdout }}"

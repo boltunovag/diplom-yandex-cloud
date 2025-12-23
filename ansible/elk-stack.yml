@@ -1,0 +1,205 @@
+---
+- name: Deploy ELK Stack 7.17.21 (PRODUCTION READY)
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars:
+    elk_version: "7.17.21"
+    elasticsearch_host: "elasticsearch.ru-central1.internal"
+    kibana_host: "kibana.ru-central1.internal"
+  tasks:
+    # 1. Установка Docker (на все хосты, кроме Zabbix)
+    - name: Install Docker on non-Zabbix hosts
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      when: inventory_hostname != 'zabbix.ru-central1.internal'
+    
+    # Добавление пользователя в группу docker (ДО запуска сервиса!)
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+      when: inventory_hostname != 'zabbix.ru-central1.internal'
+    
+    - name: Apply group changes without new session
+      shell: |
+        # Этот способ не создает новую оболочку
+        exec sg docker -c "echo 'Groups applied'" || true
+      when: inventory_hostname != 'zabbix.ru-central1.internal'
+      ignore_errors: yes
+    
+    - name: Start Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+      when: inventory_hostname != 'zabbix.ru-central1.internal'
+    
+    - name: Install python3-docker
+      apt:
+        name: python3-docker
+        state: present
+      when: inventory_hostname != 'zabbix.ru-central1.internal'
+    
+    # 2. Elasticsearch (ИСПРАВЛЕНО: host режим)
+    - name: Set vm.max_map_count for Elasticsearch
+      sysctl:
+        name: vm.max_map_count
+        value: "262144"
+        sysctl_set: yes
+        state: present
+        reload: yes
+      when: inventory_hostname == 'elasticsearch.ru-central1.internal'
+    
+    - name: Create Elasticsearch data directory
+      file:
+        path: /opt/elasticsearch/data
+        state: directory
+        owner: "1000"
+        group: "1000"
+        mode: '0755'
+      when: inventory_hostname == 'elasticsearch.ru-central1.internal'
+    
+    - name: Run Elasticsearch container
+      docker_container:
+        name: elasticsearch
+        image: "docker.elastic.co/elasticsearch/elasticsearch:{{ elk_version }}"
+        state: started
+        restart_policy: unless-stopped
+        network_mode: "host"  # ← КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: HOST РЕЖИМ
+        volumes:
+          - /opt/elasticsearch/data:/usr/share/elasticsearch/data
+        env:
+          discovery.type: "single-node"
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      when: inventory_hostname == 'elasticsearch.ru-central1.internal'
+    
+    # 2.1 Проверка доступности Elasticsearch (локально)
+    - name: Wait for Elasticsearch to start (local check)
+      uri:
+        url: "http://localhost:9200"
+        status_code: 200
+        timeout: 30
+      register: es_local_check
+      until: es_local_check.status == 200
+      retries: 10
+      delay: 10
+      when: inventory_hostname == 'elasticsearch.ru-central1.internal'
+    
+    # 2.2 Проверка доступности Elasticsearch по DNS
+    - name: Verify Elasticsearch is accessible by hostname
+      uri:
+        url: "http://{{ elasticsearch_host }}:9200"
+        status_code: 200
+        timeout: 10
+      register: es_hostname_check
+      until: es_hostname_check.status == 200
+      retries: 5
+      delay: 5
+      when: inventory_hostname == 'elasticsearch.ru-central1.internal'
+    
+    # 3. Kibana
+    - name: Verify Elasticsearch is reachable from Kibana host
+      uri:
+        url: "http://{{ elasticsearch_host }}:9200"
+        status_code: 200
+        timeout: 10
+      when: inventory_hostname == 'kibana.ru-central1.internal'
+    
+    - name: Run Kibana container
+      docker_container:
+        name: kibana
+        image: "docker.elastic.co/kibana/kibana:{{ elk_version }}"
+        state: started
+        restart_policy: unless-stopped
+        network_mode: "host"
+        env:
+          ELASTICSEARCH_HOSTS: "http://{{ elasticsearch_host }}:9200"
+          SERVER_HOST: "0.0.0.0"
+          SERVER_PUBLICBASEURL: "http://{{ kibana_host }}:5601"  # ← ДОБАВЛЕНО ДЛЯ КОРРЕКТНЫХ ССЫЛОК
+      when: inventory_hostname == 'kibana.ru-central1.internal'
+    
+    # 3.1 Проверка Kibana
+    - name: Wait for Kibana to start
+      uri:
+        url: "http://localhost:5601/api/status"
+        status_code: 200
+        timeout: 30
+      register: kibana_result
+      until: kibana_result.status == 200
+      retries: 15
+      delay: 10
+      when: inventory_hostname == 'kibana.ru-central1.internal'
+    
+    # 4. Filebeat (ИСПРАВЛЕНО: Nginx-модуль для парсинга логов)
+    - name: Create Filebeat config directory
+      file:
+        path: /etc/filebeat
+        state: directory
+        mode: '0755'
+      when: inventory_hostname in ['web-1.ru-central1.internal', 'web-2.ru-central1.internal']
+    
+    - name: Create Filebeat configuration (Nginx module)
+      copy:
+        content: |
+          filebeat.modules:
+            - module: nginx
+              access:
+                enabled: true
+                var.paths: ["/var/log/nginx/access.log"]
+              error:
+                enabled: true
+                var.paths: ["/var/log/nginx/error.log"]
+          output.elasticsearch:
+            hosts: ["http://{{ elasticsearch_host }}:9200"]
+          setup.kibana:
+            host: "{{ kibana_host }}:5601"
+            protocol: "http"
+          setup.dashboards.enabled: true
+          logging.level: info
+        dest: /etc/filebeat/filebeat.yml
+        mode: '0644'
+      when: inventory_hostname in ['web-1.ru-central1.internal', 'web-2.ru-central1.internal']
+    
+    - name: Run Filebeat container
+      docker_container:
+        name: filebeat
+        image: "docker.elastic.co/beats/filebeat:{{ elk_version }}"
+        state: started
+        restart_policy: unless-stopped
+        network_mode: "host"
+        user: root
+        volumes:
+          - /var/log/nginx:/var/log/nginx:ro
+          - /etc/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+        command: ["filebeat", "-e", "-strict.perms=false"]
+      when: inventory_hostname in ['web-1.ru-central1.internal', 'web-2.ru-central1.internal']
+    
+    # 4.1 Проверка доступности Elasticsearch из Filebeat хостов
+    - name: Verify Elasticsearch is reachable from web servers
+      uri:
+        url: "http://{{ elasticsearch_host }}:9200"
+        status_code: 200
+        timeout: 10
+      when: inventory_hostname in ['web-1.ru-central1.internal', 'web-2.ru-central1.internal']
+    
+    # 5. ФИНАЛЬНЫЙ ОТЧЁТ
+    - name: Final verification report
+      debug:
+        msg: |
+          🎓 ELK STACK DEPLOYMENT SUCCESSFUL!
+          ✅ Elasticsearch: http://{{ elasticsearch_host }}:9200
+          ✅ Kibana: http://{{ kibana_host }}:5601
+          ✅ Filebeat: Running on web servers
+          📊 Dashboard: http://{{ kibana_host }}:5601/app/dashboards
+          
+          🔄 Next steps:
+          1. Access Kibana at http://{{ kibana_host }}:5601
+          2. Create index pattern 'filebeat-*'
+          3. Check if Nginx logs are appearing in Discover
+      run_once: yes
+      delegate_to: localhost

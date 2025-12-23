@@ -1,0 +1,56 @@
+---
+- name: Install Docker on non-Zabbix hosts
+  hosts: all
+  become: yes
+  tasks:
+    - name: Skip Docker installation on Zabbix server
+      meta: end_host
+      when: inventory_hostname == 'zabbix.ru-central1.internal'
+      
+    - name: Remove old Docker packages
+      apt:
+        name: "{{ item }}"
+        state: absent
+        autoremove: yes
+      loop:
+        - docker
+        - docker-engine  
+        - docker.io
+        - containerd
+        - runc
+        
+    - name: Install Docker prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates  
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+        
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+        
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        
+    - name: Start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+        
+    - name: Install python3-docker
+      apt:
+        name: python3-docker
+        state: present

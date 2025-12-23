@@ -1,0 +1,2 @@
+{"type":"index-pattern","id":"nginx-pattern","attributes":{"title":"nginx-*","timeFieldName":"@timestamp"}}
+{"type":"dashboard","id":"nginx-main-dashboard","attributes":{"title":"NGINX Monitoring Dashboard","description":"Dashboard for monitoring nginx web servers","hits":0,"version":1,"panelsJSON":"[{\"version\":\"7.17.0\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15,\"i\":\"0\"},\"panelIndex\":\"0\",\"embeddableConfig\":{\"title\":\"nginx access logs\"}}]","optionsJSON":"{\"hidePanelTitles\":false,\"useMargins\":true}"}}

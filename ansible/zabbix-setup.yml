@@ -71,7 +71,7 @@
     - name: Run Zabbix stack with Docker Compose
       shell: |
         cd /opt/zabbix
-        docker-compose up -d
+        docker compose up 
       args:
         chdir: /opt/zabbix
 
