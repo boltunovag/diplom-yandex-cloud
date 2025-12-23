@@ -149,10 +149,10 @@
 ### Ссылки для проверки
 
 * Сайт
-![sait](http://http://158.160.219.110/)
+[sait](http://http://158.160.219.110/)
 
 * Zabbix
-![Zabbix](http://158.160.123.38/zabbix.php?action=dashboard.view&dashboardid=1)
+[Zabbix](http://158.160.123.38/zabbix.php?action=dashboard.view&dashboardid=2)
 
 * ELK
 [ELK](http://178.154.203.10:5601/app/dashboards#/view/55a9e6e0-a29e-11e7-928f-5dbe6f6f5519-ecs?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now)))
